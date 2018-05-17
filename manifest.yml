@@ -1,0 +1,8 @@
+---
+applications:
+- name: demo-app-js
+  memory: 256M
+  buildpack: https://github.com/cloudfoundry/nodejs-buildpack
+  domain: wise-paas.com
+  services:
+  - iothub
