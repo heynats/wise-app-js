@@ -26,5 +26,7 @@ app.listen(port, (err) => {
   console.log(`demo app is listening on ${port}`);
 });
 
-import { GetAgent } from "./controllers/pubAndSubControl";
-var agentController = GetAgent();
+import { GetRMMAgent } from "./controllers/pubAndSubControl";
+import { GetConnection } from "./models/dao";
+GetRMMAgent();
+GetConnection();

@@ -1,11 +1,17 @@
+/**
+ * pubAndSubControl.js is based on WISECoreSample.js with modifications
+ * to meet the actual setup of the demo.
+ */
 import WISECore from "../lib/WISECore";
 
-var vcapServices = JSON.parse(process.env.VCAP_SERVICES);
-var iothubAcc = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.username;
-var iothubPw = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.password;
-var iothubUrl = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.uri;
-var iothubHost = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.host;
-var iothubPort = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.port;
+// using service binding method to connect to the IoT hub.
+// connection settings can be retrived using process.env
+const vcapServices = JSON.parse(process.env.VCAP_SERVICES);
+const iothubAcc = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.username;
+const iothubPw = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.password;
+//const iothubUrl = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.uri;
+const iothubHost = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.host;
+const iothubPort = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.port;
 //console.log("----------------------------");
 //console.log(vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt);
 //console.log("----------------------------");
@@ -18,9 +24,13 @@ var strHostName = "demo-app-js";
 var strProductTag = "demoAppJs";
 
 var clientInstance;
-var iHeartbeat = 60; // 60 sec.
-var pHeartbeatHandle = 0; //the Handle to clear heartbeat interval.
-var pReportHandle = 0; //the Handle to clear report data interval.
+
+// heartbeat rate defaults to 60 seconds
+var iHeartbeat = 60;
+
+// flags to indication reporting status for heartbeat and device info reporting
+var pSendHeartbeat = 0;
+var pReportDeviceInfo = 0;
 
 function getCurrTime() {
   return new Date().getTime();
@@ -35,11 +45,11 @@ function On_Connect() {
   clientInstance.core_device_register();
   clientInstance.core_heartbeat_send();
 
-  if(pHeartbeatHandle != 0) {
-    clearInterval(pHeartbeatHandle);
-    pHeartbeatHandle = 0;
+  if(pSendHeartbeat != 0) {
+    clearInterval(pSendHeartbeat);
+    pSendHeartbeat = 0;
   }
-  pHeartbeatHandle = setInterval(function () {
+  pSendHeartbeat = setInterval(function () {
     clientInstance.core_heartbeat_send();
   }, iHeartbeat*1000);
 
@@ -62,15 +72,15 @@ function pubSubTest() {
 // function to handle lostconnect event
 function On_Lostconnect() {
   console.log("Lost connection...");
-  clearInterval(pHeartbeatHandle);
-  pHeartbeatHandle = 0;
+  clearInterval(pSendHeartbeat);
+  pSendHeartbeat = 0;
 }
 
 // function to handle disconnect event
 function On_Disconnect() {
   console.log("Disconnecting...");
-  clearInterval(pHeartbeatHandle);
-  pHeartbeatHandle = 0;
+  clearInterval(pSendHeartbeat);
+  pSendHeartbeat = 0;
 }
 
 // function to handle Received message
@@ -110,13 +120,13 @@ function On_GetCapability(strMessage, strClientID, userdata) {
 function On_StartReport(strMessage, strClientID, userdata) {
   let root = JSON.parse(strMessage);
   let interval = root["content"]["autoUploadIntervalSec"];
-  if (pReportHandle != 0) {
-    clearInterval(pReportHandle);
-    pReportHandle = 0;
+  if (pReportDeviceInfo != 0) {
+    clearInterval(pReportDeviceInfo);
+    pReportDeviceInfo = 0;
   }
   let ts = getCurrTime();
   sendSensorData(ts);
-  pReportHandle = setInterval(function () {
+  pReportDeviceInfo = setInterval(function () {
     let ts = getCurrTime();
     sendSensorData(ts);
   }, interval * 1000);
@@ -124,8 +134,8 @@ function On_StartReport(strMessage, strClientID, userdata) {
 
 // function to handle StopReport event
 function On_StopReport(strMessage, strClientID, userdata) {
-  clearInterval(pReportHandle);
-  pReportHandle = 0;
+  clearInterval(pReportDeviceInfo);
+  pReportDeviceInfo = 0;
 }
 
 // send capability to describe supported sensor data
@@ -158,35 +168,41 @@ function On_Query_HeartbeatRate(strSessionID, strClientID, userdata) {
 
 function On_Update_HeartbeatRate(iRate, strSessionID, strClientID, userdata) {
   iHeartbeat = iRate;
-  if(pHeartbeatHandle != 0) {
-    clearInterval(pHeartbeatHandle);
-    pHeartbeatHandle = 0;
+  if(pSendHeartbeat != 0) {
+    clearInterval(pSendHeartbeat);
+    pSendHeartbeat = 0;
   }
-  pHeartbeatHandle = setInterval(function () {
+  pSendHeartbeat = setInterval(function () {
     clientInstance.core_heartbeat_send();
   }, iHeartbeat*1000);
   return clientInstance.core_action_response(130, strSessionID, true, strClientID);
 }
 
-export function GetAgent() {
+function InitAgent() {
+  let client = new WISECore();
+  client.core_initialize(strClientId, strHostName, strCustomId, null);
+  client.core_tag_set(strProductTag);
+  client.core_product_info_set(strCustomId, null /*no parent*/, "0.1.0", "App", "demo-app-js", "Advantech");
+  client.core_time_tick_callback_set(getCurrTime);
+  client.core_connection_callback_set(On_Connect, On_Lostconnect, On_Disconnect, On_MsgRecv);
+  client.core_action_callback_set(On_Rename, On_Update);
+  client.core_server_reconnect_callback_set(On_Server_Reconnect);
+  client.core_iot_callback_set(On_GetCapability, On_StartReport, On_StopReport);
+  client.core_heartbeat_callback_set(On_Query_HeartbeatRate, On_Update_HeartbeatRate);
+  if (client.core_connect(iothubHost, iothubPort, iothubAcc, iothubPw)) {
+    clientInstance = client;
+  }
+  else {
+    console.log("----------------------------");
+    console.log("Cannot connect to IoT hub!");
+    console.log("----------------------------");
+  }
+}
+
+export function GetRMMAgent() {
   if (typeof(clientInstance) === "undefined") {
-    let client = new WISECore();
-    client.core_initialize(strClientId, strHostName, strCustomId, null);
-    client.core_tag_set(strProductTag);
-    client.core_product_info_set(strCustomId, null /*no parent*/, "0.1.0", "App", "demo-app-js", "Advantech");
-    client.core_time_tick_callback_set(getCurrTime);
-    client.core_connection_callback_set(On_Connect, On_Lostconnect, On_Disconnect, On_MsgRecv);
-    client.core_action_callback_set(On_Rename, On_Update);
-    client.core_server_reconnect_callback_set(On_Server_Reconnect);
-    client.core_iot_callback_set(On_GetCapability, On_StartReport, On_StopReport);
-    client.core_heartbeat_callback_set(On_Query_HeartbeatRate, On_Update_HeartbeatRate);
-    if (client.core_connect(iothubHost, iothubPort, iothubAcc, iothubPw)) {
-      clientInstance = client;
-    }
-    else {
-      console.log("----------------------------");
-      console.log("Cannot connect to IoT hub!");
-      console.log("----------------------------");
-    }
+    InitAgent();
+  } else {
+    return clientInstance;
   }
 }
