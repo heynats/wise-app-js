@@ -821,7 +821,7 @@ function On_Recv(core_contex, topic, payload, packet) {
   case CommCmd.wise_heartbeatrate_update_req:
     if(core_contex.on_update_heartbeatrate != null) {
       let strSessionID = root["sessionID"];
-      let iRate = root["content"]["heartbeatrate"];
+      let iRate = root["heartbeatrate"];
       core_contex.on_update_heartbeatrate(iRate, strSessionID, core_contex.strClientID, core_contex.userdata);
     }
     break;

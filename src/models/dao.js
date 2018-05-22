@@ -9,6 +9,7 @@ function InitDbConn() {
   // create a connection pool with cutom settings
   // options information at http://docs.sequelizejs.com/manual/installation/usage.html#options
   let dbConn = new Sequelize(dbUri, {
+    /*
     dialect: "postgres",
     native: true,
     define: {
@@ -20,6 +21,7 @@ function InitDbConn() {
       acquire: 60000,
       idle: 30000
     }
+    */
   });
 
   // test the connection
