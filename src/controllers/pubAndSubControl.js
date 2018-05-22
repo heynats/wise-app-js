@@ -21,7 +21,7 @@ const iothubPort = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.port
 var strCustomId = "0d0e0m0o0app";
 var strClientId = "00000005-0000-NB07-0410-" + strCustomId;
 var strHostName = "demo-app-js";
-var strProductTag = "demoAppJs";
+var strProductTag = "RMM";
 
 var clientInstance;
 
