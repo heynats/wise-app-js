@@ -1,6 +1,8 @@
 import { join } from "path";
 import express from "express";
 import exphbs from "express-handlebars";
+import { GetRMMAgent } from "./controllers/pubAndSubControl";
+import { GetConnection } from "./models/dao";
 
 const app = express();
 const port = 8080;
@@ -26,7 +28,6 @@ app.listen(port, (err) => {
   console.log(`demo app is listening on ${port}`);
 });
 
-import { GetRMMAgent } from "./controllers/pubAndSubControl";
-import { GetConnection } from "./models/dao";
+// calling getter methods to establish connection with WISE-PaaS services
 GetRMMAgent();
 GetConnection();

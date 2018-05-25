@@ -1,6 +1,16 @@
 import Sequelize from "sequelize";
 
-const vcapServices = JSON.parse(process.env.VCAP_SERVICES);
+// dummy environment variable for testing purpose, will cause connection
+// to service to fail!
+const localEnv = JSON.stringify({
+  "postgresql": [{
+    "credentials": {
+      "uri": "postgresql://user:secret@localhost"
+    }
+  }]
+});
+
+const vcapServices = JSON.parse(process.env.VCAP_SERVICES || localEnv);
 const dbUri = vcapServices["postgresql"][0].credentials.uri;
 
 var sequelizeConn;

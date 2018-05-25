@@ -4,9 +4,26 @@
  */
 import WISECore from "../lib/WISECore";
 
+// dummy environment variable for testing purpose, will cause connection
+// to service to fail!
+const localEnv = JSON.stringify({
+  "p-rabbitmq": [{
+    "credentials": {
+      "protocols": {
+        "mqtt": {
+          "username": "username",
+          "password": "password",
+          "host": "127.0.0.1",
+          "port": 1883
+        }
+      }
+    }
+  }]
+});
+
 // using service binding method to connect to the IoT hub.
 // connection settings can be retrived using process.env
-const vcapServices = JSON.parse(process.env.VCAP_SERVICES);
+const vcapServices = JSON.parse(process.env.VCAP_SERVICES || localEnv);
 const iothubAcc = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.username;
 const iothubPw = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.password;
 //const iothubUrl = vcapServices["p-rabbitmq"][0].credentials.protocols.mqtt.uri;
@@ -54,9 +71,6 @@ function On_Connect() {
   }, iHeartbeat*1000);
 
   pubSubTest();
-  console.log("----------------------------");
-  console.log("Connected to IoT hub!");
-  console.log("----------------------------");
 }
 
 // function to demonstrate how to use publish and subscribe.
@@ -191,6 +205,9 @@ function InitAgent() {
   client.core_heartbeat_callback_set(On_Query_HeartbeatRate, On_Update_HeartbeatRate);
   if (client.core_connect(iothubHost, iothubPort, iothubAcc, iothubPw)) {
     clientInstance = client;
+    console.log("----------------------------");
+    console.log("Connected to IoT hub!");
+    console.log("----------------------------");
   }
   else {
     console.log("----------------------------");
