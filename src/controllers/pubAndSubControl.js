@@ -4,8 +4,7 @@
  */
 import WISECore from "../lib/WISECore";
 
-// dummy environment variable for testing purpose, will cause connection
-// to service to fail!
+// please use correct local environment settings for testing purpose
 const localEnv = JSON.stringify({
   "p-rabbitmq": [{
     "credentials": {
